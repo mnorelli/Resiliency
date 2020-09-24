@@ -1,0 +1,10 @@
+Restore:
+
+from 
+https://data.sfgov.org/Geographic-Locations-and-Boundaries/Addresses-Enterprise-Addressing-System/3mea-di5p (Sep 2020)
+
+to
+../Resiliency/source data
+/Addresses_-_Enterprise_Addressing_System.csv
+
+

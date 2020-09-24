@@ -1,0 +1,124 @@
+SAVED LOCATION
+
+Michael Norelli MacBook
+/Users/mnorelli/GIS_Projects/San Francisco/Resiliency
+
+
+SOURCES
+
+San Francisco Building footprints
+https://data.sfgov.org/Housing-and-Buildings/Building-Footprints/72ai-zege
+geo_export_8da15d7f-7467-4cf1-9f36-b77433be685a.shp
+geo_export_8da15d7f-7467-4cf1-9f36-b77433be685a.dbf
+geo_export_8da15d7f-7467-4cf1-9f36-b77433be685a.shx
+geo_export_8da15d7f-7467-4cf1-9f36-b77433be685a.prj
+Projection: 4326 WGS84(DD)
+Documentation date: May 2017
+
+Current Subdivision Parcels (aka City Lots)
+https://data.sfgov.org/Geographic-Locations-and-Boundaries/-Known-Issue-Current-Subdivision-Parcels-aka-City-/45et-ht7c
+Updated nightly: The CityLots spatial data layer is a representation of the City and County of San Francisco's Subdivision parcels. Each of the 200,000-plus polygons has a unique BLKLOT identifier which is the Assessor Parcel Number (APN) Multiple level (condominium, live/work, et al) lots are represented as well, with their ground or base lot being the MAPBLKLOT key.
+citylots.shp
+citylots.dbf
+citylots.shx
+citylots.prj
+Projection: 102643 NAD_1983_StatePlane_California_III_FIPS_0403_Feet
+Date: Oct 12, 2018
+These may not help much.  They don't overlay well with the building footprints developed from LiDAR data and have large lots covering multiple footprints, so it is less useful for getting a one-to-one correlation between soft story addresses and a building polygon.  Its main value may be in the nightly update to the block, lot and address ranges tabular data.
+
+Soft Story Properties List
+https://sfdbi.org/soft-story-properties-list
+Soft Story Property List - By Tier as of 10_3_18.csv
+Record count: 4907
+
+San Francisco Addresses
+https://data.sfgov.org/Geographic-Locations-and-Boundaries/Addresses-Enterprise-Addressing-System/sr5d-tnui/data
+Addresses_-_Enterprise_Addressing_System.csv
+
+Soft Story Properties List KML
+/Users/mnorelli/GIS_Projects/San Francisco/Resiliency/Soft Story Property List - By Tier as of 10_3_18 MN20181009.kml
+
+
+OUTPUTS
+
+Soft Story Property List - By Tier as of 10_3_18 MN20181009.xlsx
+Soft Story Property List - By Tier as of 10_3_18 MN20181009.csv
+Added a new nine-character field, MBLR, to the Soft Story Property List - By Tier as of 10_3_18.csv to provide a field to link to San Francisco Building footprints by concatenating "SF", Block, and Lot values.
+
+addresses.txt
+4907 addresseds from Soft Story Properties List.  Do not reorder these records!  Their implicit line number is important for processing subsequent records.
+
+geocoder.py
+Python script to geocode addresses.txt and print the results to geocoding_result.txt.  Not tested as a stand-alone script, and needs refactoring to add arguments for processing all records or a subset.  
+
+geocoding_result.txt
+Outputs from geocoder_plaintextkey.py.  Includes a line number from the implicit line in the addresses.txt file, as well as address, latlon, and location type.  Subsequent corrections were appended to the file, so the final result should be sorted and culled for duplicate line numbers.
+
+addr_to_freq_table.csv
+Set of 411 non-unique MBLR codes in San Francisco Building footprints with MBLRs and street addresses whose lot and block match
+
+
+PROCESS
+
+2018/10/9
+
+Starting with Soft Story Property List - By Tier as of 10_3_18.csv
+
+SF_BldgFoot_2017-05_description.pdf describes the MBLR field in geo_export_8da15d7f-7467-4cf1-9f36-b77433be685a.dbf as:
+"San Francisco property key: Assessor's Map-Block-Lot of land parcel, plus Right-of-way area identifier derived from street Centerline Node Network (CNN)"
+
+In the Soft Story data Soft Story Property List - By Tier as of 10_3_18.csv, there are BLOCK and LOT columns, five characters and four characters respectively.
+Since an example of MBLR from BldgFoot is "SF7272030" and Soft Story BLOCK and LOTs look like "0184" and" 006" (Excel hides leading zeroes), concatenating "SF" and these will make a similar code.  Some BLOCKs and LOTs have a single appended alpha letter.
+
+Saved as Soft Story Property List - By Tier as of 10_3_18 MN20181009.xlsx
+Added column MBLR
+Populated with ="SF"&text(BLOCK,"000#")&text(LOT,"00#")
+
+Linked to BldgFoot on MBLR.
+Connected to 5724 records, which is more than 4907 in the Soft Story source!
+Exported as SF_BldgFoot_2017-05_Soft_Story_20181004.shp
+
+Summary on MBLR field in the above shapefile
+Count 5724  <--- this means one soft story linked to multiple footprints
+Count (distinct)  4803   <--- this means four soft story records didn't link
+
+MBLR does not contain unique values, one block/lot for each distinct building in BldgFoot.  For example, there are 46 footprints with MBLR = "SF7535100".  This layer does have unique values in SF16_BLDGID, like 201006.0014226, described as:
+"San Francisco Building ID using criteria of 2016-09, 6-char epoch, '.' , 7-char zero-padded AreaID or new ID in editing epochs after initial '201006.'"
+but this is not relateable to any existing information in SoftStory.
+
+Ran a frequency on MBLR in SF_BldgFoot_201705_SoftStory_20181004.shp which revelaed 411 MBLR's used twice or more for the same footprint polygons.  Erased the "good" unique MBLR's int he frequency and joined the result to street addresses from the same file (ISSUE: can QGIS make a frequency on more than one field?) to make addr_to_freq_table.csv
+
+Bring in address centroids?
+
+Loading in the SF Addresses, which have a lonlat coordinate revealed a substandard correlation to the building footprints.  For example 1 - 9 Gold Mone Drive points are all on a single location in the middle of the block bordered by Gold Mine and Diamond Heights Blvd.
+
+Loaded Soft Story Properties to Google Fusion Tables 
+https://fusiontables.google.com/data?docid=1aucDtyUTiCHySzblJyHKQGCqI1yYQia8Fh0lKxuD#map:id=3
+to use their geocoder (which is also used on the SF DBI website where the data are stored).  Geocoding took two days.  
+
+2018/10/10
+
+Exported Fusion Table mapped results as a KML.
+Doesn't contain latlons!  Google won't let you have those without paying for them.
+Got a Geocoding API from Google key associated with a billing account to run geocoding.
+
+Used geocoder_plaintextkey.py to generate geocoding_result.txt with latlons for each soft story point.
+
+2018/10/11
+
+Completed geocoding the 4807 records, with location types of ROOFTOP, RANGE_INTERPOLATED, and APPROXIATE.  Where records where APPROXIMATE, i.e. set at the centroid of San Francisco, most of these were on Mission Street which got accurate locations on a second pass through the Google geocoder.  A few others with unclear addresses (e.g. "TR" for Terrace instead of Trail) were fixed by hand and added to geocoding_results.txt
+
+70 have RANGE_INTERPOLATED locations.  Review shows that these addresses have, for example, house numbers beyond the street numbering, so the point is dropped at the end of a street, or a house number that doesn't fall inside a property with a range on that street, or are what might be an alternate address for a building at a street corner using the other street.
+
+2018/10/12
+
+One San Diego adrress?   789 Sixth Ave, San Diego, CA 92101, USA
+
+2018/12/1
+
+Fixed San Diego address using mobile phone Google Maps (xx why do I get different results using Google geocoder and Google Maps UI?)
+
+
+
+
+
